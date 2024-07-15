@@ -1,0 +1,42 @@
+name: Monitor Website
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "*/1 * * * *"  # Runs every minute
+
+jobs:
+  call-monitor:
+    runs-on: ubuntu-latest
+    concurrency:
+      group: monitor-website
+      cancel-in-progress: false  # Ensure the new job doesn't cancel the in-progress job
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v2
+
+    - name: Check for lock file
+      run: bash lock.sh
+
+    - name: Set up Node.js
+      uses: actions/setup-node@v2
+      with:
+        node-version: '16'
+
+    - name: Install dependencies
+      run: npm install
+
+    - name: Run monitor script
+      run: node index.js
+      env:
+        WEBSITE_URL: ${{ secrets.WEBSITE_URL }}
+        WEBHOOK_URL: ${{ secrets.WEBHOOK_URL }}
+        HTTP_STATUS_DESCRIPTIONS: ${{ secrets.HTTP_STATUS_DESCRIPTIONS }}
+        MONGO_URI: ${{ secrets.MONGO_URI }}
+        MONGO_DB_NAME: ${{ secrets.MONGO_DB_NAME }}
+        MONGO_COLLECTION_NAME: ${{ secrets.MONGO_COLLECTION_NAME }}
+
+    - name: Remove lock file
+      if: always()
+      run: bash unlock.sh
